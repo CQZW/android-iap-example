@@ -8,14 +8,50 @@
   tools:context="com.dooboolab.iapexample.MainActivity">
 
   <RelativeLayout
-    android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_width="368dp"
+    android:layout_height="551dp"
+    android:layout_centerHorizontal="true"
+    tools:layout_editor_absoluteY="8dp"
+    tools:layout_editor_absoluteX="8dp">
     <Button
-      android:id="@+id/btn"
-      android:layout_width="wrap_content"
-      android:layout_height="wrap_content"
-      android:layout_centerInParent="true"
-      android:text="IAP Test"/>
+      android:id="@+id/btn1"
+      android:textColor="@drawable/sel_txt_white_grey"
+      android:background="@drawable/sel_btn_purple"
+      android:layout_marginBottom="16dp"
+      android:text="Buy 1,000P"
+      style="?android:borderlessButtonStyle"
+      android:layout_width="match_parent"
+      android:layout_height="50dp" />
+    <Button
+      android:id="@+id/btn2"
+      android:layout_below="@+id/btn1"
+      android:textColor="@drawable/sel_txt_white_grey"
+      android:background="@drawable/sel_btn_purple"
+      android:layout_marginBottom="16dp"
+      android:text="Buy 5,000P"
+      style="?android:borderlessButtonStyle"
+      android:layout_width="match_parent"
+      android:layout_height="50dp" />
+    <Button
+      android:id="@+id/btn3"
+      android:layout_below="@+id/btn2"
+      android:textColor="@drawable/sel_txt_white_grey"
+      android:background="@drawable/sel_btn_purple"
+      android:layout_marginBottom="16dp"
+      android:text="Buy 10,000P"
+      style="?android:borderlessButtonStyle"
+      android:layout_width="match_parent"
+      android:layout_height="50dp" />
+    <Button
+      android:id="@+id/btn4"
+      android:layout_below="@+id/btn3"
+      android:textColor="@drawable/sel_txt_white_grey"
+      android:background="@drawable/sel_btn_purple"
+      android:layout_marginBottom="16dp"
+      android:text="Buy 20,000P"
+      style="?android:borderlessButtonStyle"
+      android:layout_width="match_parent"
+      android:layout_height="50dp" />
   </RelativeLayout>
 
 </android.support.constraint.ConstraintLayout>

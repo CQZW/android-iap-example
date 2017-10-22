@@ -1,6 +1,41 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-  <color name="colorPrimary">#3F51B5</color>
-  <color name="colorPrimaryDark">#303F9F</color>
-  <color name="colorAccent">#FF4081</color>
+  <color name="transparent">#00000000</color>
+  <color name="white">#ffffff</color>
+  <color name="pale_grey">#e5e7ec</color>
+  <color name="bluey_grey">#a0a7b8</color>
+  <color name="navy">#292767</color>
+  <color name="purple">#5451a6</color>
+  <color name="sky_blue">#22b1dd</color>
+  <color name="sky_blue_dark">#007caf</color>
+
+  <color name="french_blue_n">#ff4262a3</color>
+  <color name="leafy_green_n">#ff56bc37</color>
+  <color name="navy_s">#e3292767</color>
+  <color name="purple_s">#e35451a6</color>
+  <color name="french_blue_s">#e34262a3</color>
+  <color name="leafy_green_s">#e356bc37</color>
+
+  <color name="disabled">#bac0cd</color>
+  <color name="facebook">#4262a3</color>
+  <color name="gray_bg">#f8f8f9</color>
+  <color name="gray_bg_p">#f3f3f4</color>
+  <color name="dark_gray">#a0a7b8</color>
+  <color name="light_gray">#dbdbdf</color>
+  <color name="dark_bg">#323232</color>
+  <color name="red">#ff1f3a</color>
+
+  <!-- colors by fonts -->
+  <color name="headline">#292767</color>
+  <color name="headline_secondary">#dbdbdf</color>
+  <color name="title">#292767</color>
+  <color name="title_white">#fff</color>
+  <color name="subhead">#292767</color>
+  <color name="subhead_secondary">#bac0cd</color>
+  <color name="body">#292767</color>
+  <color name="body_secondary">#a0a7b8</color>
+  <color name="button">#fff</color>
+  <color name="caption">#292767</color>
+  <color name="caption_secondary">#a0a7b8</color>
+
 </resources>

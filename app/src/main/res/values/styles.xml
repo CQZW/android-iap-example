@@ -1,11 +1,40 @@
 <resources>
 
   <!-- Base application theme. -->
-  <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+  <style name="AppTheme" parent="Theme.AppCompat.NoActionBar">
     <!-- Customize your theme here. -->
-    <item name="colorPrimary">@color/colorPrimary</item>
-    <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
-    <item name="colorAccent">@color/colorAccent</item>
+    <item name="colorPrimary">@color/bluey_grey</item>
+    <item name="colorPrimaryDark">@color/pale_grey</item>
+    <item name="colorAccent">@color/bluey_grey</item>
+    <item name="android:windowBackground">@color/white</item>
+    <item name="android:textColorPrimary">@color/navy</item>
+    <item name="android:textColor">@color/bluey_grey</item>
+  </style>
+
+  <style name="AppTheme.NoActionBar">
+    <item name="windowActionBar">false</item>
+    <item name="windowNoTitle">true</item>
+  </style>
+
+  <style name="AppTheme.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+  <style name="AppTheme.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
+  <style name="error_label">
+    <item name="android:textSize">0sp</item>
+  </style>
+
+  <style name="navy_spinner">
+    <item name="colorControlNormal">@color/navy</item>
+    <item name="colorControlActivated">@color/navy</item>
+  </style>
+  <style name="skyblue_spinner">
+    <item name="colorControlNormal">@color/sky_blue</item>
+    <item name="colorControlActivated">@color/sky_blue</item>
+  </style>
+
+  <style name="MyActionBarTheme" parent="ThemeOverlay.AppCompat.Dark.ActionBar">
+    <item name="android:textColorPrimary">@color/navy</item>
   </style>
 
 </resources>
