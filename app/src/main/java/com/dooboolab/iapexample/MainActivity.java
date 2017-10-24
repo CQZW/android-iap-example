@@ -4,6 +4,7 @@ import android.app.PendingIntent;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentSender;
 import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.os.RemoteException;
@@ -12,12 +13,14 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import com.android.vending.billing.IInAppBillingService;
 import com.dooboolab.iapexample.util.IabHelper;
 import com.dooboolab.iapexample.util.IabResult;
 import com.dooboolab.iapexample.util.Purchase;
 
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
@@ -26,6 +29,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
   private String TAG = "MainActivity";
   private final int RC_REQUEST = 10001;
+
+  private Boolean prepared;
 
   private Button btn1;
   private Button btn2;
@@ -61,6 +66,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     btn3.setOnClickListener(this);
     btn4.setOnClickListener(this);
 
+    prepare();
+  }
+
+  public void prepare() {
     Intent intent = new Intent("com.android.vending.billing.InAppBillingService.BIND");
     // This is the key line that fixed everything for me
     intent.setPackage("com.android.vending");
@@ -74,30 +83,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         Log.d(TAG, "Setup finished.");
 
         if (!result.isSuccess()) {
-          // Oh noes, there was a problem.
           Log.d(TAG, "Problem setting up in-app billing: " + result);
+          prepared = false;
           return;
         }
-        AlreadyPurchaseItems();
+        refreshPurchaseItems();
 
         // Have we been disposed of in the meantime? If so, quit.
-        if (mHelper == null) return;
+        if (mHelper == null) {
+          prepared = false;
+          return;
+        }
 
-        // Important: Dynamically register for broadcast messages about updated purchases.
-        // We register the receiver here instead of as a <receiver> in the Manifest
-        // because we always call getPurchases() at startup, so therefore we can ignore
-        // any broadcasts sent while the app isn't running.
-        // Note: registering this listener in an Activity is a bad idea, but is done here
-        // because this is a SAMPLE. Regardless, the receiver must be registered after
-        // IabHelper is setup, but before first call to getPurchases().
-//        mBroadcastReceiver = new IabBroadcastReceiver(MainActivity.this);
-//        IntentFilter broadcastFilter = new IntentFilter(IabBroadcastReceiver.ACTION);
-//        registerReceiver(mBroadcastReceiver, broadcastFilter);
+        prepared = true;
       }
     });
   }
 
-  public void AlreadyPurchaseItems() {
+  public void refreshPurchaseItems() {
     try {
       Bundle ownedItems = mService.getPurchases(3, getPackageName(), "inapp", null);
       int response = ownedItems.getInt("RESPONSE_CODE");
@@ -119,10 +122,78 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
   }
 
-  public void Buy(String id_item) {
+  public void getItems() {
+    if (!prepared || mService == null) {
+      Log.d(TAG, "IAP not prepared. Please restart your app again.");
+      return;
+    }
+
+    ArrayList<String> skuList = new ArrayList<> ();
+    skuList.add("4636942031015148831");
+    skuList.add("5000P");
+    skuList.add("10000P");
+    Bundle querySkus = new Bundle();
+    querySkus.putStringArrayList("ITEM_ID_LIST", skuList);
+
+    try {
+      Bundle skuDetails = mService.getSkuDetails(3, getPackageName(), "inapp", querySkus);
+      Toast.makeText(getApplicationContext(), "getSkuDetails() - success return Bundle", Toast.LENGTH_SHORT).show();
+
+      int response = skuDetails.getInt("RESPONSE_CODE");
+      Toast.makeText(getApplicationContext(), "getSkuDetails() - \"RESPONSE_CODE\" return " + String.valueOf(response), Toast.LENGTH_SHORT).show();
+      Log.i(TAG, "getSkuDetails() - \"RESPONSE_CODE\" return " + String.valueOf(response));
+
+      if (response != 0) return;
+
+      ArrayList<String> responseList = skuDetails.getStringArrayList("DETAILS_LIST");
+      Log.i(TAG, "getSkuDetails() - \"DETAILS_LIST\" return " + responseList.toString());
+
+      if (responseList.size() == 0) return;
+
+      for (String thisResponse : responseList) {
+        try {
+          JSONObject object = new JSONObject(thisResponse);
+
+          String sku   = object.getString("productId");
+          String title = object.getString("title");
+          String price = object.getString("price");
+
+          Log.i(TAG, "getSkuDetails() - \"DETAILS_LIST\":\"productId\" return " + sku);
+          Log.i(TAG, "getSkuDetails() - \"DETAILS_LIST\":\"title\" return " + title);
+          Log.i(TAG, "getSkuDetails() - \"DETAILS_LIST\":\"price\" return " + price);
+
+          if (!sku.equals("android.test.purchased")) continue;
+
+          Bundle buyIntentBundle = mService.getBuyIntent(3, getPackageName(), sku, "inapp", "bGoa+V7g/yqDXvKRqq+JTFn4uQZbPiQJo4pf9RzJ");
+
+          Toast.makeText(getApplicationContext(), "getBuyIntent() - success return Bundle", Toast.LENGTH_SHORT).show();
+          Log.i(TAG, "getBuyIntent() - success return Bundle");
+
+          response = buyIntentBundle.getInt("RESPONSE_CODE");
+          Toast.makeText(getApplicationContext(), "getBuyIntent() - \"RESPONSE_CODE\" return " + String.valueOf(response), Toast.LENGTH_SHORT).show();
+          Log.i(TAG, "getBuyIntent() - \"RESPONSE_CODE\" return " + String.valueOf(response));
+        } catch (JSONException e) {
+          e.printStackTrace();
+        } catch (RemoteException e) {
+          e.printStackTrace();
+
+          Toast.makeText(getApplicationContext(), "getSkuDetails() - fail!", Toast.LENGTH_SHORT).show();
+          Log.w(TAG, "getBuyIntent() - fail!");
+        } catch (Exception e) {
+          e.printStackTrace();
+        }
+      }
+    } catch (RemoteException re) {
+      Log.d(TAG, "RemoteException");
+      Log.d(TAG, re.getMessage());
+      Toast.makeText(getApplicationContext(), "getSkuDetails() - fail!", Toast.LENGTH_SHORT).show();
+    }
+  }
+
+  public void buyItem(String id_item) {
     try{
-      Bundle buyIntentBundle = mService.getBuyIntent(3, getPackageName(), id_item, "inapp", "test");
-      PendingIntent pendingIntent = buyIntentBundle.getParcelable("BUY_INTENT");
+      Bundle buyItemIntentBundle = mService.getBuyIntent(3, getPackageName(), id_item, "inapp", "test");
+      PendingIntent pendingIntent = buyItemIntentBundle.getParcelable("buyItem_INTENT");
 
       if (pendingIntent != null) {
         startIntentSenderForResult(
@@ -136,8 +207,56 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mHelper.launchPurchaseFlow(this, getPackageName(), RC_REQUEST, mPurchaseFinishedListener, "test");
       }
     } catch (Exception e) {
-      Log.e(TAG, "Buy error");
+      Log.e(TAG, "buyItem error");
       Log.e(TAG, e.getMessage());
+    }
+  }
+
+  public void getOwnedItems() {
+    if (!prepared || mService == null) {
+      Log.d(TAG, "IAP not prepared. Please restart your app again.");
+      return;
+    }
+
+    try {
+      Bundle ownedItems = mService.getPurchases(3, getPackageName(), "inapp", null);
+
+      int response = ownedItems.getInt("RESPONSE_CODE");
+      if (response == 0) {
+        ArrayList<String> ownedSkus =
+            ownedItems.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
+        ArrayList<String>  purchaseDataList =
+            ownedItems.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
+        ArrayList<String>  signatureList =
+            ownedItems.getStringArrayList("INAPP_DATA_SIGNATURE_LIST");
+        String continuationToken =
+            ownedItems.getString("INAPP_CONTINUATION_TOKEN");
+
+        for (int i = 0; i < purchaseDataList.size(); ++i) {
+          String purchaseData = purchaseDataList.get(i);
+          String signature = signatureList.get(i);
+          String sku = ownedSkus.get(i);
+
+          // do something with this purchase information
+          // e.g. display the updated list of products owned by user
+        }
+
+        // if continuationToken != null, call getPurchases again
+        // and pass in the token to retrieve more items
+      }
+    } catch (RemoteException re) {
+      Log.d(TAG, "RemoteException");
+      Log.d(TAG, re.getMessage());
+      Toast.makeText(getApplicationContext(), "getSkuDetails() - fail!", Toast.LENGTH_SHORT).show();
+    }
+  }
+
+  public void consumeItem(String token) {
+    try {
+      mService.consumePurchase(3, getPackageName(), token);
+    } catch (RemoteException re) {
+      Log.e(TAG, "RemoteException");
+      Log.e(TAG, re.getMessage());
     }
   }
 
@@ -145,16 +264,17 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
   public void onClick(View view) {
     switch (view.getId()) {
       case R.id.btn1:
-          Buy("4636942031015148831");
+        buyItem("android.test.purchased");
+        // buyItem("4636942031015148831");
         break;
       case R.id.btn2:
-          Buy("4636168153771692423");
+          buyItem("4636168153771692423");
         break;
       case R.id.btn3:
-          Buy("4634419232429048426");
+          buyItem("4634419232429048426");
         break;
       case R.id.btn4:
-          Buy("android.test.purchased");
+          getItems();
         break;
     }
   }
@@ -198,12 +318,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
   IabHelper.OnIabPurchaseFinishedListener mPurchaseFinishedListener  = new IabHelper.OnIabPurchaseFinishedListener() {
     public void onIabPurchaseFinished(IabResult result, Purchase purchase) {
       Log.d(TAG, "Purchase finished: " + result + ", purchase: " + purchase);
-      try {
-        mService.consumePurchase(3, getPackageName(), purchase.getToken());
-      } catch (RemoteException re) {
-        Log.e(TAG, "RemoteException");
-        Log.e(TAG, re.getMessage());
-      }
+      consumeItem(purchase.getToken());
       // 만약 서버로 영수증 체크후에 아이템 추가한다면,
       // 서버로 purchase.getOriginalJson() , purchase.getSignature() 2개 보내시면 됩니다.
     }
