@@ -3,6 +3,9 @@ apply plugin: 'com.android.application'
 android {
   compileSdkVersion 26
   buildToolsVersion "26.0.1"
+  dexOptions {
+    javaMaxHeapSize "4g"
+  }
   defaultConfig {
     applicationId "com.dooboolab.iapexample"
     minSdkVersion 15
@@ -10,6 +13,7 @@ android {
     versionCode 1
     versionName "1.0"
     testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    multiDexEnabled true //important
   }
   buildTypes {
     release {
@@ -26,6 +30,5 @@ dependencies {
   })
   compile 'com.android.support:appcompat-v7:26.+'
   compile 'com.android.support.constraint:constraint-layout:1.0.2'
-  compile 'com.android.billingclient:billing:1.0'
   testCompile 'junit:junit:4.12'
 }
