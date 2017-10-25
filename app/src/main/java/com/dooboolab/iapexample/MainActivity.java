@@ -8,6 +8,7 @@ import android.content.IntentSender;
 import android.content.ServiceConnection;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
@@ -15,22 +16,28 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.Toast;
 
+import com.android.billingclient.api.BillingClient;
+import com.android.billingclient.api.BillingClientStateListener;
+import com.android.billingclient.api.BillingFlowParams;
+import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchasesUpdatedListener;
+import com.android.billingclient.api.SkuDetails;
+import com.android.billingclient.api.SkuDetailsParams;
+import com.android.billingclient.api.SkuDetailsResponseListener;
 import com.android.vending.billing.IInAppBillingService;
-import com.dooboolab.iapexample.util.IabHelper;
-import com.dooboolab.iapexample.util.IabResult;
-import com.dooboolab.iapexample.util.Purchase;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
   private String TAG = "MainActivity";
   private final int RC_REQUEST = 10001;
 
-  private Boolean prepared;
+  private Boolean prepared = false;
 
   private Button btn1;
   private Button btn2;
@@ -38,7 +45,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
   private Button btn4;
 
   private IInAppBillingService mService;
-  private IabHelper mHelper;
   private final String BASE64_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAiNdnKt3hfOkWkzgo4LllkzmvvdjZtxZbeHgkj7ccxIe3Jdd0x2IqIM1ZwzvNgmDSaBkUXJMOZV9nWuS6Dalq3lPViJwNPgf2gaWJ6j9RXVSZNfugbp8svFDmbZCDy5phCmFxwLRsllCkq9yCnDlE2SS0ZjnsD+scll4aIZsyEdotXt4xKdyl+xDbUPOCVfU9rLzTfrSnUig8Ed92aesMYWWQPoCI9Yhl/BAl0tJRf2BVIXtB1W95sns0wcABSt6rz3+B97XhgnmnA/A/kvKdytt4kNxdVQroF9bbZpITCd4KvavKccom4MEV0XtrUPRyholvBtDcXO+xt8S7ldu7RQIDAQAB";
 
   ServiceConnection mServiceConn = new ServiceConnection() {
@@ -50,6 +56,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
       mService = IInAppBillingService.Stub.asInterface(service);
     }
   };
+
+  private BillingClient mBillingClient;
 
   @Override
   protected void onCreate(Bundle savedInstanceState) {
@@ -76,28 +84,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     getApplicationContext().bindService(intent, mServiceConn, Context.BIND_AUTO_CREATE);
 
-    mHelper = new IabHelper(this, BASE64_KEY);
-    mHelper.enableDebugLogging(true);
-    mHelper.startSetup(new IabHelper.OnIabSetupFinishedListener() {
-      public void onIabSetupFinished(IabResult result) {
-        Log.d(TAG, "Setup finished.");
-
-        if (!result.isSuccess()) {
-          Log.d(TAG, "Problem setting up in-app billing: " + result);
-          prepared = false;
-          return;
-        }
-        refreshPurchaseItems();
-
-        // Have we been disposed of in the meantime? If so, quit.
-        if (mHelper == null) {
-          prepared = false;
-          return;
-        }
-
-        prepared = true;
-      }
-    });
+    mBillingClient = BillingClient.newBuilder(this).setListener(purchasesUpdatedListener).build();
+    mBillingClient.startConnection(billingClientStateListener);
   }
 
   public void refreshPurchaseItems() {
@@ -132,65 +120,66 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     skuList.add("4636942031015148831");
     skuList.add("5000P");
     skuList.add("10000P");
-    Bundle querySkus = new Bundle();
-    querySkus.putStringArrayList("ITEM_ID_LIST", skuList);
-
-    try {
-      Bundle skuDetails = mService.getSkuDetails(3, getPackageName(), "inapp", querySkus);
-      Toast.makeText(getApplicationContext(), "getSkuDetails() - success return Bundle", Toast.LENGTH_SHORT).show();
-
-      int response = skuDetails.getInt("RESPONSE_CODE");
-      Toast.makeText(getApplicationContext(), "getSkuDetails() - \"RESPONSE_CODE\" return " + String.valueOf(response), Toast.LENGTH_SHORT).show();
-      Log.i(TAG, "getSkuDetails() - \"RESPONSE_CODE\" return " + String.valueOf(response));
-
-      if (response != 0) return;
-
-      ArrayList<String> responseList = skuDetails.getStringArrayList("DETAILS_LIST");
-      Log.i(TAG, "getSkuDetails() - \"DETAILS_LIST\" return " + responseList.toString());
-
-      if (responseList.size() == 0) return;
-
-      for (String thisResponse : responseList) {
-        try {
-          JSONObject object = new JSONObject(thisResponse);
-
-          String sku   = object.getString("productId");
-          String title = object.getString("title");
-          String price = object.getString("price");
-
-          Log.i(TAG, "getSkuDetails() - \"DETAILS_LIST\":\"productId\" return " + sku);
-          Log.i(TAG, "getSkuDetails() - \"DETAILS_LIST\":\"title\" return " + title);
-          Log.i(TAG, "getSkuDetails() - \"DETAILS_LIST\":\"price\" return " + price);
-
-          if (!sku.equals("android.test.purchased")) continue;
-
-          Bundle buyIntentBundle = mService.getBuyIntent(3, getPackageName(), sku, "inapp", "bGoa+V7g/yqDXvKRqq+JTFn4uQZbPiQJo4pf9RzJ");
-
-          Toast.makeText(getApplicationContext(), "getBuyIntent() - success return Bundle", Toast.LENGTH_SHORT).show();
-          Log.i(TAG, "getBuyIntent() - success return Bundle");
-
-          response = buyIntentBundle.getInt("RESPONSE_CODE");
-          Toast.makeText(getApplicationContext(), "getBuyIntent() - \"RESPONSE_CODE\" return " + String.valueOf(response), Toast.LENGTH_SHORT).show();
-          Log.i(TAG, "getBuyIntent() - \"RESPONSE_CODE\" return " + String.valueOf(response));
-        } catch (JSONException e) {
-          e.printStackTrace();
-        } catch (RemoteException e) {
-          e.printStackTrace();
-
-          Toast.makeText(getApplicationContext(), "getSkuDetails() - fail!", Toast.LENGTH_SHORT).show();
-          Log.w(TAG, "getBuyIntent() - fail!");
-        } catch (Exception e) {
-          e.printStackTrace();
+    SkuDetailsParams.Builder params = SkuDetailsParams.newBuilder();
+    params.setSkusList(skuList).setType(BillingClient.SkuType.INAPP);
+    mBillingClient.querySkuDetailsAsync(params.build(),
+      new SkuDetailsResponseListener() {
+        @Override
+        public void onSkuDetailsResponse(int responseCode, List<SkuDetails> skuDetailsList) {
+          Log.d(TAG, "responseCode: " + responseCode);
+          Log.d(TAG, skuDetailsList.toString());
         }
       }
-    } catch (RemoteException re) {
-      Log.d(TAG, "RemoteException");
-      Log.d(TAG, re.getMessage());
-      Toast.makeText(getApplicationContext(), "getSkuDetails() - fail!", Toast.LENGTH_SHORT).show();
-    }
+    );
+
+
+//          for (String thisResponse : responseList) {
+//            try {
+//              JSONObject object = new JSONObject(thisResponse);
+//
+//              String sku   = object.getString("productId");
+//              String title = object.getString("title");
+//              String price = object.getString("price");
+//
+//              Log.i(TAG, "getSkuDetails() - \"DETAILS_LIST\":\"productId\" return " + sku);
+//              Log.i(TAG, "getSkuDetails() - \"DETAILS_LIST\":\"title\" return " + title);
+//              Log.i(TAG, "getSkuDetails() - \"DETAILS_LIST\":\"price\" return " + price);
+//
+//              if (!sku.equals("android.test.purchased")) continue;
+//
+//              Bundle buyIntentBundle = mService.getBuyIntent(3, getPackageName(), sku, "inapp", "bGoa+V7g/yqDXvKRqq+JTFn4uQZbPiQJo4pf9RzJ");
+//
+//              Toast.makeText(getApplicationContext(), "getBuyIntent() - success return Bundle", Toast.LENGTH_SHORT).show();
+//              Log.i(TAG, "getBuyIntent() - success return Bundle");
+//
+//              response = buyIntentBundle.getInt("RESPONSE_CODE");
+//              Toast.makeText(getApplicationContext(), "getBuyIntent() - \"RESPONSE_CODE\" return " + String.valueOf(response), Toast.LENGTH_SHORT).show();
+//              Log.i(TAG, "getBuyIntent() - \"RESPONSE_CODE\" return " + String.valueOf(response));
+//            } catch (JSONException e) {
+//              e.printStackTrace();
+//            } catch (RemoteException e) {
+//              e.printStackTrace();
+//
+//              Toast.makeText(getApplicationContext(), "getSkuDetails() - fail!", Toast.LENGTH_SHORT).show();
+//              Log.w(TAG, "getBuyIntent() - fail!");
+//            } catch (Exception e) {
+//              e.printStackTrace();
+//            }
+//          }
+//        } catch (RemoteException re) {
+//          Log.d(TAG, "RemoteException");
+//          Log.d(TAG, re.getMessage());
+//          Toast.makeText(getApplicationContext(), "getSkuDetails() - fail!", Toast.LENGTH_SHORT).show();
+//        }
   }
 
   public void buyItem(String id_item) {
+    BillingFlowParams flowParams = BillingFlowParams.newBuilder()
+        .setSku(id_item)
+        .setType(BillingClient.SkuType.INAPP)
+        .build();
+
+    int responseCode = mBillingClient.launchBillingFlow(this, flowParams);
     try{
       Bundle buyItemIntentBundle = mService.getBuyIntent(3, getPackageName(), id_item, "inapp", "test");
       PendingIntent pendingIntent = buyItemIntentBundle.getParcelable("buyItem_INTENT");
@@ -204,7 +193,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             Integer.valueOf(0),
             Integer.valueOf(0)
         );
-        mHelper.launchPurchaseFlow(this, getPackageName(), RC_REQUEST, mPurchaseFinishedListener, "test");
+        // mHelper.launchPurchaseFlow(this, getPackageName(), RC_REQUEST, mPurchaseFinishedListener, "test");
       }
     } catch (Exception e) {
       Log.e(TAG, "buyItem error");
@@ -291,36 +280,31 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
   }
 
-  // 방법 1
-  @Override
-  protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-    super.onActivityResult(requestCode, resultCode, data);
-    Log.d(TAG, "requestCode: " + requestCode);
-    Log.d(TAG, "resultCode: " + resultCode);
-    if (requestCode == RC_REQUEST) {
-      if (resultCode == RESULT_OK) {
-        if (!mHelper.handleActivityResult(requestCode, resultCode, data)) {
-          super.onActivityResult(requestCode, resultCode, data);
-
-          int responseCode = data.getIntExtra("RESPONSE_CODE", 0);
-          String purchaseData = data.getStringExtra("INAPP_PURCHASE_DATA");
-          String dataSignature = data.getStringExtra("INAPP_DATA_SIGNATURE");
-
-          return;
-        }
+  BillingClientStateListener billingClientStateListener = new BillingClientStateListener() {
+    @Override
+    public void onBillingSetupFinished(@BillingClient.BillingResponse int billingResponseCode) {
+      if (billingResponseCode == BillingClient.BillingResponse.OK) {
+        // The billing client is ready.
+        Log.d(TAG, "billing client ready");
+        prepared = true;
       }
     }
-    // 구매 취소 처리
-    Log.d(TAG, "payment cancelled");
-  }
+    @Override
+    public void onBillingServiceDisconnected() {
+      // Try to restart the connection on the next request to
+      // Google Play by calling the startConnection() method.
+      Log.d(TAG, "billing client disconnected");
+      prepared = false;
+      mBillingClient.startConnection(this);
+    }
+  };
 
-  // 방법 2
-  IabHelper.OnIabPurchaseFinishedListener mPurchaseFinishedListener  = new IabHelper.OnIabPurchaseFinishedListener() {
-    public void onIabPurchaseFinished(IabResult result, Purchase purchase) {
-      Log.d(TAG, "Purchase finished: " + result + ", purchase: " + purchase);
-      consumeItem(purchase.getToken());
-      // 만약 서버로 영수증 체크후에 아이템 추가한다면,
-      // 서버로 purchase.getOriginalJson() , purchase.getSignature() 2개 보내시면 됩니다.
+  PurchasesUpdatedListener purchasesUpdatedListener = new PurchasesUpdatedListener() {
+    @Override
+    public void onPurchasesUpdated(int responseCode, @Nullable List<Purchase> purchases) {
+      Log.d(TAG, "Purcase Updated Listener");
+      Log.d(TAG, "responseCode: " + responseCode);
+      Log.d(TAG, purchases.toString());
     }
   };
 }
