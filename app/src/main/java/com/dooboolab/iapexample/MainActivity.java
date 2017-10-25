@@ -19,7 +19,9 @@ import android.widget.Toast;
 import com.android.billingclient.api.BillingClient;
 import com.android.billingclient.api.BillingClientStateListener;
 import com.android.billingclient.api.BillingFlowParams;
+import com.android.billingclient.api.ConsumeResponseListener;
 import com.android.billingclient.api.Purchase;
+import com.android.billingclient.api.PurchaseHistoryResponseListener;
 import com.android.billingclient.api.PurchasesUpdatedListener;
 import com.android.billingclient.api.SkuDetails;
 import com.android.billingclient.api.SkuDetailsParams;
@@ -180,25 +182,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         .build();
 
     int responseCode = mBillingClient.launchBillingFlow(this, flowParams);
-    try{
-      Bundle buyItemIntentBundle = mService.getBuyIntent(3, getPackageName(), id_item, "inapp", "test");
-      PendingIntent pendingIntent = buyItemIntentBundle.getParcelable("buyItem_INTENT");
-
-      if (pendingIntent != null) {
-        startIntentSenderForResult(
-            pendingIntent.getIntentSender(),
-            RC_REQUEST,
-            new Intent(),
-            Integer.valueOf(0),
-            Integer.valueOf(0),
-            Integer.valueOf(0)
-        );
-        // mHelper.launchPurchaseFlow(this, getPackageName(), RC_REQUEST, mPurchaseFinishedListener, "test");
-      }
-    } catch (Exception e) {
-      Log.e(TAG, "buyItem error");
-      Log.e(TAG, e.getMessage());
-    }
+    Log.d(TAG, "buyItem responseCode: " + responseCode);
   }
 
   public void getOwnedItems() {
@@ -207,46 +191,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
       return;
     }
 
-    try {
-      Bundle ownedItems = mService.getPurchases(3, getPackageName(), "inapp", null);
-
-      int response = ownedItems.getInt("RESPONSE_CODE");
-      if (response == 0) {
-        ArrayList<String> ownedSkus =
-            ownedItems.getStringArrayList("INAPP_PURCHASE_ITEM_LIST");
-        ArrayList<String>  purchaseDataList =
-            ownedItems.getStringArrayList("INAPP_PURCHASE_DATA_LIST");
-        ArrayList<String>  signatureList =
-            ownedItems.getStringArrayList("INAPP_DATA_SIGNATURE_LIST");
-        String continuationToken =
-            ownedItems.getString("INAPP_CONTINUATION_TOKEN");
-
-        for (int i = 0; i < purchaseDataList.size(); ++i) {
-          String purchaseData = purchaseDataList.get(i);
-          String signature = signatureList.get(i);
-          String sku = ownedSkus.get(i);
-
-          // do something with this purchase information
-          // e.g. display the updated list of products owned by user
-        }
-
-        // if continuationToken != null, call getPurchases again
-        // and pass in the token to retrieve more items
-      }
-    } catch (RemoteException re) {
-      Log.d(TAG, "RemoteException");
-      Log.d(TAG, re.getMessage());
-      Toast.makeText(getApplicationContext(), "getSkuDetails() - fail!", Toast.LENGTH_SHORT).show();
-    }
+    Purchase.PurchasesResult purchasesResult = mBillingClient.queryPurchases(BillingClient.SkuType.INAPP);
+    mBillingClient.queryPurchaseHistoryAsync(BillingClient.SkuType.INAPP, purchaseHistoryListener);
   }
 
   public void consumeItem(String token) {
-    try {
-      mService.consumePurchase(3, getPackageName(), token);
-    } catch (RemoteException re) {
-      Log.e(TAG, "RemoteException");
-      Log.e(TAG, re.getMessage());
-    }
+    mBillingClient.consumeAsync(token, consumeResponseListener);
   }
 
   @Override
@@ -287,6 +237,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         // The billing client is ready.
         Log.d(TAG, "billing client ready");
         prepared = true;
+        refreshPurchaseItems();
       }
     }
     @Override
@@ -299,12 +250,41 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
   };
 
+  ConsumeResponseListener consumeResponseListener = new ConsumeResponseListener() {
+    @Override
+    public void onConsumeResponse(@BillingClient.BillingResponse int responseCode, String outToken) {
+      if (responseCode == BillingClient.BillingResponse.OK) {
+        // Handle the success of the consume operation.
+        // For example, increase the number of coins inside the user's basket.
+        Log.d(TAG, "consume responseCode: " + responseCode);
+      }
+    }
+  };
+
   PurchasesUpdatedListener purchasesUpdatedListener = new PurchasesUpdatedListener() {
     @Override
     public void onPurchasesUpdated(int responseCode, @Nullable List<Purchase> purchases) {
-      Log.d(TAG, "Purcase Updated Listener");
+      Log.d(TAG, "Purchase Updated Listener");
       Log.d(TAG, "responseCode: " + responseCode);
-      Log.d(TAG, purchases.toString());
+      if (responseCode == 0) {
+        Log.d(TAG, purchases.toString());
+        consumeItem(purchases.get(0).getPurchaseToken());
+      }
+    }
+  };
+
+  PurchaseHistoryResponseListener purchaseHistoryListener = new PurchaseHistoryResponseListener() {
+    @Override
+    public void onPurchaseHistoryResponse(@BillingClient.BillingResponse int responseCode,
+                                          List<Purchase> purchasesList) {
+      if (responseCode == BillingClient.BillingResponse.OK
+          && purchasesList != null) {
+        for (Purchase purchase : purchasesList) {
+          // Process the result.
+          Log.d(TAG, "purchase");
+          Log.d(TAG, purchase.toString());
+        }
+      }
     }
   };
 }
