@@ -37,8 +37,6 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
   private String TAG = "MainActivity";
-  private final int RC_REQUEST = 10001;
-
   private Boolean prepared = false;
 
   private Button btn1;
@@ -119,9 +117,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     ArrayList<String> skuList = new ArrayList<> ();
-    skuList.add("4636942031015148831");
-    skuList.add("5000P");
-    skuList.add("10000P");
+    skuList.add("point_1000");
+    skuList.add("5000_point");
+    skuList.add("10000_point");
     SkuDetailsParams.Builder params = SkuDetailsParams.newBuilder();
     params.setSkusList(skuList).setType(BillingClient.SkuType.INAPP);
     mBillingClient.querySkuDetailsAsync(params.build(),
@@ -133,46 +131,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
       }
     );
-
-
-//          for (String thisResponse : responseList) {
-//            try {
-//              JSONObject object = new JSONObject(thisResponse);
-//
-//              String sku   = object.getString("productId");
-//              String title = object.getString("title");
-//              String price = object.getString("price");
-//
-//              Log.i(TAG, "getSkuDetails() - \"DETAILS_LIST\":\"productId\" return " + sku);
-//              Log.i(TAG, "getSkuDetails() - \"DETAILS_LIST\":\"title\" return " + title);
-//              Log.i(TAG, "getSkuDetails() - \"DETAILS_LIST\":\"price\" return " + price);
-//
-//              if (!sku.equals("android.test.purchased")) continue;
-//
-//              Bundle buyIntentBundle = mService.getBuyIntent(3, getPackageName(), sku, "inapp", "bGoa+V7g/yqDXvKRqq+JTFn4uQZbPiQJo4pf9RzJ");
-//
-//              Toast.makeText(getApplicationContext(), "getBuyIntent() - success return Bundle", Toast.LENGTH_SHORT).show();
-//              Log.i(TAG, "getBuyIntent() - success return Bundle");
-//
-//              response = buyIntentBundle.getInt("RESPONSE_CODE");
-//              Toast.makeText(getApplicationContext(), "getBuyIntent() - \"RESPONSE_CODE\" return " + String.valueOf(response), Toast.LENGTH_SHORT).show();
-//              Log.i(TAG, "getBuyIntent() - \"RESPONSE_CODE\" return " + String.valueOf(response));
-//            } catch (JSONException e) {
-//              e.printStackTrace();
-//            } catch (RemoteException e) {
-//              e.printStackTrace();
-//
-//              Toast.makeText(getApplicationContext(), "getSkuDetails() - fail!", Toast.LENGTH_SHORT).show();
-//              Log.w(TAG, "getBuyIntent() - fail!");
-//            } catch (Exception e) {
-//              e.printStackTrace();
-//            }
-//          }
-//        } catch (RemoteException re) {
-//          Log.d(TAG, "RemoteException");
-//          Log.d(TAG, re.getMessage());
-//          Toast.makeText(getApplicationContext(), "getSkuDetails() - fail!", Toast.LENGTH_SHORT).show();
-//        }
   }
 
   public void buyItem(String id_item) {
@@ -203,14 +161,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
   public void onClick(View view) {
     switch (view.getId()) {
       case R.id.btn1:
-        buyItem("android.test.purchased");
-        // buyItem("4636942031015148831");
+        // buyItem("android.test.purchased");
+        buyItem("point_1000");
         break;
       case R.id.btn2:
-          buyItem("4636168153771692423");
+          buyItem("5000_point");
         break;
       case R.id.btn3:
-          buyItem("4634419232429048426");
+          // buyItem("4634419232429048426");
+        buyItem("android.test.purchased");
         break;
       case R.id.btn4:
           getItems();

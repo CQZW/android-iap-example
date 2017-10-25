@@ -38,7 +38,7 @@
       android:textColor="@drawable/sel_txt_white_grey"
       android:background="@drawable/sel_btn_purple"
       android:layout_marginBottom="16dp"
-      android:text="Buy 10,000P"
+      android:text="Buy Test"
       style="?android:borderlessButtonStyle"
       android:layout_width="match_parent"
       android:layout_height="50dp" />
